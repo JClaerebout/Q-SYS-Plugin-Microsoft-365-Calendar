@@ -1,0 +1,664 @@
+PluginInfo = {
+	-- Use a tilde (~) to seperate the name into a folder
+    Name = "Microsoft-365-Calendar",
+	-- Use semantic versioning
+    Version = "1.0.0.0",
+	-- Use a GUID for the Id (Note: Avoid changing the Id for a plugin once it is set)
+    Id = "e1803df9-ab41-4729-82c5-bf300b54ad28",
+	-- The square brackets allow for a multi-line string
+    Description = [[Retrieves calendar information from Microsoft 365]],
+    Author = "Jens Claerebout",
+    ShowDebug = true
+}
+
+------------------------------- Global Variables ------------------------------
+COLORS = { 
+	["OK"] = "#00FF00",
+	[0] = "#00FF00",
+	["COMPROMISED"] = "orange",
+	[1] = "orange",
+	["FAULT"] = "red",
+	[2] = "red",
+	["NOT_PRESENT"] = "gray",
+	[3] = "gray",
+	["MISSING"] = "darkred",
+	[4] = "darkred",
+	["INITIALIZING"] = "blue",
+	[5] = "blue",
+	["GREEN"] = "#00ff00",
+	["RED"] = "#ff0000",
+	["ORANGE"] = "#ffa500",
+	["GRAY"] = "#7c7c7c",
+	["DARK_GREEN"] = "#007C00",
+}
+
+STATUS_VALUES = {
+	["OK"] = 0,
+	["COMPROMISED"] = 1,
+	["FAULT"] = 2,
+	["NOT_PRESENT"] = 3,
+	["MISSING"] = 4,
+	["INITIALIZING"] = 5,
+}
+
+ENABLE_CODE_PIN = false
+
+--------------------------------- Properties ----------------------------------
+function GetProperties()
+    local props = { }
+
+    return props
+end
+
+--Modify visibility based on other properties
+--[[
+    Example: 
+    if props["propertyName"].Value == "DHCP" then
+        props["someStaticIPRelatedProperty"].IsHidden = true
+    else
+        props["someStaticIPRelatedProperty"].IsHidden = false
+]]--
+function RectifyProperties(props)
+    return props
+end
+
+------------------------- Plugin Block Name and Color -------------------------
+function GetPrettyName(props)
+    return PluginInfo["Name"] .. " v" .. PluginInfo["Version"]
+end
+
+function GetColor(props)
+	return ConvertColor("#cccccc")
+end
+
+---------------------------------- Controls -----------------------------------
+function GetControls(props)
+    local ctls = { }
+
+	table.insert(ctls, {
+		Name = "Status",
+		ControlType = "Indicator",
+		IndicatorType = "Status",
+		Count = 1,
+		PinStyle = "Output",
+		UserPin = true
+	})
+
+	table.insert(ctls, {
+		Name = "Tenant_ID",
+		ControlType = "Text",
+		Count = 1,
+		PinStyle = "Input",
+		UserPin = true
+	})
+
+	table.insert(ctls, {
+		Name = "Client_ID",
+		ControlType = "Text",
+		Count = 1,
+		PinStyle = "Input",
+		UserPin = true
+	})
+
+	table.insert(ctls, {
+		Name = "Client_Secret",
+		ControlType = "Text",
+		Count = 1,
+		PinStyle = "Input",
+		UserPin = true
+	})
+
+	table.insert(ctls, {
+		Name = "Mailbox",
+		ControlType = "Text",
+		Count = 1,
+		PinStyle = "Input",
+		UserPin = true
+	})
+
+	table.insert(ctls, {
+		Name = "NextSoon",
+		ControlType = "Button",
+		ButtonType = "Toggle",
+		Count = 1,
+		PinStyle = "Output",
+		UserPin = true
+	})
+
+	table.insert(ctls, {
+		Name = "RoomStatusText",
+		ControlType = "Indicator",
+		IndicatorType = "Text",
+		Count = 1,
+		UserPin = false
+	})
+
+	table.insert(ctls, {
+		Name = "RoomStatusColor",
+		ControlType = "Indicator",
+		IndicatorType = "Text",
+		Count = 1,
+		UserPin = false
+	})
+
+	if ENABLE_CODE_PIN then
+		table.insert(ctls, {
+            Name = "code",
+            ControlType = "Text",
+            Count = 1,
+            PinStyle = "Input",
+            UserPin = true
+        })
+	end
+
+    return ctls
+end
+
+------------------------------- Control Layout --------------------------------
+function GetControlLayout(props)
+	-- Uncomment the next line if you are using multiple pages
+	--local currentPage = props["page_index"].Value
+
+    local layout = { }
+
+	layout["Status"] = 
+	{
+		PrettyName = "Status",
+		Position = { 167,76 },
+		Size = { 482,34 },
+		Style = "Text",
+		TextFontSize = 20,
+		WordWrap = true,
+		IsBold = false
+	}
+
+	layout["Tenant_ID"] = 
+	{
+		PrettyName = "Tenant ID",
+		Position = { 167,150 },
+		Size = { 482,34 },
+		TextFontSize = 20,
+		Style = "Text"
+	}  
+
+	layout["Client_ID"] = 
+	{
+		PrettyName = "Client ID",
+		Position = { 167,224 },
+		Size = { 482,34 },
+		TextFontSize = 20,
+		Style = "Text"
+	}  
+
+	layout["Client_Secret"] = 
+	{
+		PrettyName = "Client Secret",
+		Position = { 167,298 },
+		Size = { 482,34 },
+		TextFontSize = 20,
+		Style = "Text"
+	}  
+
+	layout["Mailbox"] = 
+	{
+		PrettyName = "Mailbox",
+		Position = { 167,372 },
+		Size = { 482,34 },
+		TextFontSize = 20,
+		Style = "Text"
+	}  
+
+	layout["RoomStatusColor"] = 
+	{
+		PrettyName = "RoomStatusColor",
+		Position = { 84,450 },
+		Size = { 649,332 },
+		Style = "Text",
+		CornerRadius = 10,
+		TextFontSize = 30
+	}
+	layout["RoomStatusText"] = 
+	{
+		PrettyName = "RoomStatusText",
+		Position = { 94,460 },
+		Size = { 628,313 },
+		Style = "Text",
+		CornerRadius = 10,
+		TextFontSize = 30
+	}
+
+	if ENABLE_CODE_PIN then
+		layout["code"] = 
+		{
+			PrettyName = "Code",
+			Style = "None"
+		}
+	end
+
+    local graphics = { }
+
+	table.insert(graphics, {
+		Type = "GroupBox",
+		Position = { 14,14 },
+		Size = {788,835},
+		StrokeColor = "black",
+		StrokeWidth = 2,
+		CornerRadius = 10,
+	})
+
+	table.insert(graphics, {
+		Type = "Label",
+		Position = { 167,35 },
+		Size = {482,34},
+		Text = "Status",
+		TextSize = 20,
+		CornerRadius = 10,
+	})
+
+	table.insert(graphics, {
+		Type = "Label",
+		Position = { 167,116 },
+		Size = {482,34},
+		Text = "Tennant ID",
+		TextSize = 20,
+		CornerRadius = 10,
+	})
+
+	table.insert(graphics, {
+		Type = "Label",
+		Position = { 167,190 },
+		Size = {482,34},
+		Text = "Client ID",
+		TextSize = 20,
+		CornerRadius = 10,
+	})
+
+	table.insert(graphics, {
+		Type = "Label",
+		Position = { 167,264 },
+		Size = {482,34},
+		Text = "Client Secret",
+		TextSize = 20,
+		CornerRadius = 10,
+	})
+
+	table.insert(graphics, {
+		Type = "Label",
+		Position = { 167,338 },
+		Size = {482,34},
+		Text = "Mailbox",
+		TextSize = 20,
+		CornerRadius = 10,
+	})
+    return layout, graphics
+end
+
+---------------------------- Other Plugin Functions ---------------------------
+
+function GetPins(props)
+	local pins = { }
+  
+	return pins
+end
+--[[ Uncomment if you need multiple pages (tabs)
+--Current page number can be retrieved in other functions as props["page_index"].Value
+function GetPages(props)
+    local pages = {}
+
+    return pages
+end
+]]
+function GetComponents(props)
+	local components = { }
+
+	return components
+end
+
+function GetWiring(props)
+	local wiring = { }
+  
+	return wiring
+end
+
+------------------------------ Local Functions --------------------------------
+function HEXtoDEC(hex)
+	hex = string.upper(hex)
+	local b1 = string.byte(string.sub(hex, 1, 1))
+	local b2 = string.byte(string.sub(hex, 2, 2))
+  
+	return( (b1<=57 and b1-48 or b1-55)*16 + (b2<=57 and b2-48 or b2-55) )
+end
+
+function ConvertColor(c)
+	local t = {}
+	t[1] = HEXtoDEC(string.sub(c,2,3))
+	t[2] = HEXtoDEC(string.sub(c,4,5))
+	t[3] = HEXtoDEC(string.sub(c,6,7))
+	return t
+end
+
+function GraphTimeToUnix(str)
+    local year, month, day, hour, min, sec =
+        str:match("(%d+)%-(%d+)%-(%d+)T(%d+):(%d+):(%d+)")
+
+    return os.time({
+        year = tonumber(year),
+        month = tonumber(month),
+        day = tonumber(day),
+        hour = tonumber(hour),
+        min = tonumber(min),
+        sec = tonumber(sec)
+    })
+end
+
+function FormatTime(unixTime)
+    return os.date("%H:%M", unixTime)
+end
+
+function UpdateRoomStatus(events)
+    local now = os.time()
+
+    local roomBooked = false
+    local currentMeeting = nil
+    local nextMeeting = nil
+
+    for _, event in ipairs(events) do
+        local startUnix = GraphTimeToUnix(event.start.dateTime)
+        local endUnix = GraphTimeToUnix(event["end"].dateTime)
+
+        event._startUnix = startUnix
+        event._endUnix = endUnix
+
+        if now >= startUnix and now < endUnix then
+            roomBooked = true
+            currentMeeting = event
+        elseif startUnix > now then
+            if nextMeeting == nil or startUnix < nextMeeting._startUnix then
+                nextMeeting = event
+            end
+        end
+    end
+
+    print("========== ROOM STATUS ==========")
+
+    if roomBooked then
+        Controls.RoomStatusColor.Color = COLOR_OCCUPIED
+        Controls.NextSoon.Boolean = false
+
+        if nextMeeting then
+            -- Booked now, and another meeting later today
+            Controls.RoomStatusText.String =
+                "Booked until: " .. FormatTime(currentMeeting._endUnix) ..
+                "\n" .. tostring(currentMeeting.subject) ..
+                "\n\nNext meeting: " .. FormatTime(nextMeeting._startUnix) .. " - " .. FormatTime(nextMeeting._endUnix) ..
+                "\n" .. tostring(nextMeeting.subject)
+
+            print("ROOM IS BOOKED")
+            print("Current: " .. tostring(currentMeeting.subject))
+            print("Ends: " .. FormatTime(currentMeeting._endUnix))
+            print("Next: " .. tostring(nextMeeting.subject))
+            print("Next starts: " .. FormatTime(nextMeeting._startUnix))
+        else
+            -- Booked now, no more meetings after this today
+            Controls.RoomStatusText.String =
+                "Booked until: " .. FormatTime(currentMeeting._endUnix) ..
+                "\n\n" .. tostring(currentMeeting.subject) ..
+                "\n\nFree after meeting"
+
+            print("ROOM IS BOOKED")
+            print("Current: " .. tostring(currentMeeting.subject))
+            print("Ends: " .. FormatTime(currentMeeting._endUnix))
+            print("Free after meeting")
+        end
+
+    else
+        -- Room is free now
+        if nextMeeting then
+            local minutesUntilNext = math.floor((nextMeeting._startUnix - now) / 60)
+
+            if minutesUntilNext <= 15 then
+                -- Free now, but next meeting soon
+                Controls.RoomStatusColor.Color = COLOR_WARNING
+                Controls.NextSoon.Boolean = true
+
+                Controls.RoomStatusText.String =
+                    "Booked in: " .. tostring(minutesUntilNext) .. " minutes" ..
+                    "\n\n" .. tostring(nextMeeting.subject)
+
+                print("ROOM IS FREE - NEXT SOON")
+                print("Next: " .. tostring(nextMeeting.subject))
+                print("Minutes until next: " .. tostring(minutesUntilNext))
+            else
+                -- Free now, next meeting later today
+                Controls.RoomStatusColor.Color = COLOR_FREE
+                Controls.NextSoon.Boolean = false
+
+                Controls.RoomStatusText.String =
+                    "Free now" ..
+                    "\n\nNext meeting: " .. FormatTime(nextMeeting._startUnix) .. " - " .. FormatTime(nextMeeting._endUnix) ..
+                    "\n\n" .. tostring(nextMeeting.subject)
+
+                print("ROOM IS FREE")
+                print("Next: " .. tostring(nextMeeting.subject))
+                print("Starts: " .. FormatTime(nextMeeting._startUnix))
+            end
+        else
+            -- Free and no more meetings today
+            Controls.RoomStatusColor.Color = COLOR_FREE
+            Controls.NextSoon.Boolean = false
+            Controls.RoomStatusText.String = "Free for the rest of the day"
+
+            print("ROOM IS FREE FOR REST OF DAY")
+        end
+    end
+end
+
+function UrlEncode(str)
+  if str then
+    str = string.gsub(str, "\n", "\r\n")
+    str = string.gsub(str, "([^%w%-_%.~])", function(c)
+      return string.format("%%%02X", string.byte(c))
+    end)
+  end
+  return str
+end
+
+function GetToken(callback)
+  local url = "https://login.microsoftonline.com/" .. TENANT_ID .. "/oauth2/v2.0/token"
+
+  local body =
+    "client_id=" .. UrlEncode(CLIENT_ID) ..
+    "&scope=" .. UrlEncode("https://graph.microsoft.com/.default") ..
+    "&client_secret=" .. UrlEncode(CLIENT_SECRET) ..
+    "&grant_type=client_credentials"
+
+  HttpClient.Upload {
+    Url = url,
+    Method = "POST",
+    Data = body,
+    Headers = {
+      ["Content-Type"] = "application/x-www-form-urlencoded"
+    },
+    EventHandler = function(_, code, data, err, headers)
+      if code == 200 then
+        Controls.Status.Value = 0
+        local result = json.decode(data)
+        accessToken = result.access_token
+        print("Token OK")
+        if callback then callback() end
+      else
+        Controls.Status.Value = 2
+        Controls.RoomStatusColor.Color = "#DCDCDC"
+        Controls.RoomStatusColor.String = ""
+        Controls.RoomStatusText.String = "Error Loading Info."
+        Controls.RoomStatusText.Color = "#3F3F3F"
+        print("Token error: " .. tostring(code))
+        print(data or err)
+      end
+    end
+  }
+end
+
+function LoadSettings()
+    TENANT_ID     = Controls.Tenant_ID.String
+    CLIENT_ID     = Controls.Client_ID.String
+    CLIENT_SECRET = Controls.Client_Secret.String
+    MAILBOX       = Controls.Mailbox.String
+end
+
+function SettingsChanged()
+    print("Settings changed")
+
+    LoadSettings()
+
+    -- Force new login token
+    accessToken = nil
+
+    -- Optional: avoid calling Graph if something is empty
+    if TENANT_ID == "" or CLIENT_ID == "" or CLIENT_SECRET == "" or MAILBOX == "" then
+        print("Missing settings")
+        return
+    end
+
+    GetBookings()
+end
+
+function GetBookings()
+  LoadSettings()
+
+  if TENANT_ID == "" or CLIENT_ID == "" or CLIENT_SECRET == "" or MAILBOX == "" then
+      print("Missing settings")
+      return
+  end
+
+  if accessToken == nil then
+    GetToken(GetBookings)
+    return
+  end
+
+  local now = os.time()
+  local t = os.date("*t")
+  t.hour = 23
+  t.min = 59
+  t.sec = 59
+  local endOfDay = os.time(t)
+
+  local startTime = os.date("!%Y-%m-%dT%H:%M:%SZ", now)
+  local endTime   = os.date("!%Y-%m-%dT%H:%M:%SZ", endOfDay)
+
+  local url =
+    "https://graph.microsoft.com/v1.0/users/" .. UrlEncode(MAILBOX) ..
+    "/calendarView?startDateTime=" .. UrlEncode(startTime) ..
+    "&endDateTime=" .. UrlEncode(endTime) ..
+    "&$select=subject,start,end,organizer,isAllDay,showAs" ..
+    "&$orderby=start/dateTime"
+
+  HttpClient.Download {
+    Url = url,
+    Headers = {
+      ["Authorization"] = "Bearer " .. accessToken,
+      ["Accept"] = "application/json",
+      ["Prefer"] = 'outlook.timezone="Europe/Brussels"'
+    },
+    EventHandler = function(_, code, data, err, headers)
+      if code == 200 then
+        Controls.Status.Value = 0
+        local result = json.decode(data)
+
+        print("Bookings found: " .. tostring(#result.value))
+
+        for i, event in ipairs(result.value) do
+          print("-----")
+          print("Subject: " .. tostring(event.subject))
+          print("Start: " .. tostring(event.start.dateTime))
+          print("End: " .. tostring(event["end"].dateTime))
+          print("ShowAs: " .. tostring(event.showAs))
+        end
+
+        UpdateRoomStatus(result.value)
+
+      elseif code == 401 then
+        Controls.Status.Value = 2
+        Controls.RoomStatusColor.Color = "#DCDCDC"
+        Controls.RoomStatusColor.String = ""
+        Controls.RoomStatusText.String = "Error Loading Info."
+        Controls.RoomStatusText.Color = "#3F3F3F"
+        print("Token expired, retrying...")
+        accessToken = nil
+        GetToken(GetBookings)
+
+      else
+        Controls.Status.Value = 3
+        Controls.RoomStatusColor.Color = "#DCDCDC"
+        Controls.RoomStatusColor.String = ""
+        Controls.RoomStatusText.String = "Error Loading Info."
+        Controls.RoomStatusText.Color = "#3F3F3F"
+        print("Graph error: " .. tostring(code))
+        print(data or err)
+      end
+    end
+  }
+end
+
+------------------------------- Runtime Logic ---------------------------------
+
+if Controls then
+
+------------------------------------ Objects ----------------------------------
+
+-------------------------------- Initialization -------------------------------
+function Initialize()
+	json = require("rapidjson")
+
+	TENANT_ID = Controls.Tenant_ID.String
+	CLIENT_ID = Controls.Client_ID.String
+	CLIENT_SECRET = Controls.Client_Secret.String
+
+
+	COLOR_FREE      = "#43A047" -- green
+	COLOR_WARNING   = "#FB8C00" -- orange
+	COLOR_OCCUPIED  = "#E53935" -- red
+
+	Controls.RoomStatusColor.Color = "#DCDCDC"
+	Controls.RoomStatusColor.String = ""
+	Controls.RoomStatusText.String = "Loading..."
+	Controls.RoomStatusText.Color = "#3F3F3F"
+
+	-- Room/user mailbox to read
+	MAILBOX = Controls.Mailbox.String
+
+	accessToken = nil
+
+	-- Poll every minute
+	bookingTimer = Timer.New()
+	bookingTimer.EventHandler = function()
+	GetBookings()
+	end
+
+	GetBookings()
+	bookingTimer:Start(60)
+
+	Controls.Client_ID.EventHandler = SettingsChanged
+	Controls.Tenant_ID.EventHandler = SettingsChanged
+	Controls.Client_Secret.EventHandler = SettingsChanged
+	Controls.Mailbox.EventHandler = SettingsChanged
+
+	LoadSettings()
+	Controls.Status.Value = 5
+end
+
+local canInitialize = true
+
+-- Check Properties and other stuff for illegal values
+
+if canInitialize then
+	print("Initializing")
+	Initialize()
+	print("Initialization Complete")
+else
+	print("Not initializing")
+end
+
+-- Nothing should be done after this point
+
+end	--if Controls 
