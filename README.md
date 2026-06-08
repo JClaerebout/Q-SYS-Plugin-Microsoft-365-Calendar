@@ -60,6 +60,7 @@ The app registration must have permission to read the target mailbox calendar. F
 | --- | --- |
 | `pollingInterval` | Calendar polling interval in seconds (1-3600). Default is `60` |
 | `nextMeetingSoonThreshold` | Number of minutes before the next meeting that turns on `NextSoon` (1-3600). Default is `15` |
+| `Timezone` | Timezone used for Microsoft Graph calendar event start and end times. Default is `Europe/Brussels` |
 
 ---
 
@@ -202,7 +203,7 @@ The plugin compares calendar events against the current time and updates the roo
 
 - The configured mailbox can be a user mailbox or a room mailbox
 - Calendar data is read through Microsoft Graph
-- The plugin currently uses the `Europe/Brussels` Outlook timezone preference
+- The plugin uses the configured `Timezone` value for the Microsoft Graph Outlook timezone preference
 - The room status check is based on events from now until the end of the current day
 - Meeting subjects are displayed in the room status text
 - Protect the client secret like any other credential
@@ -211,13 +212,12 @@ The plugin compares calendar events against the current time and updates the roo
 
 ## Known Limitations
 
-- Timezone is currently fixed to `Europe/Brussels`
+- Timezone choices are configured in the plugin property list
 
 ---
 
 ## Future Improvements
 
-- Add configurable timezone
 - Add richer error messages for Microsoft Graph responses
 
 ---
