@@ -18,7 +18,7 @@ It is designed for Q-SYS systems that need to know whether a room is currently f
 - Show current room availability
 - Indicate when the next meeting starts soon
 - Display current or upcoming meeting information
-- Poll calendar data automatically every 60 seconds
+- Poll calendar data automatically at a configurable interval
 - Expose key configuration and status controls as Q-SYS pins
 - Provide internal UI feedback with room status text and color
 
@@ -56,7 +56,10 @@ The app registration must have permission to read the target mailbox calendar. F
 
 ### Properties
 
-This plugin does not currently expose configurable plugin properties.
+| Property | Description |
+| --- | --- |
+| `pollingInterval` | Calendar polling interval in seconds (1-3600). Default is `60` |
+| `nextMeetingSoonThreshold` | Number of minutes before the next meeting that turns on `NextSoon` (1-3600). Default is `15` |
 
 ---
 
@@ -76,7 +79,9 @@ This plugin does not currently expose configurable plugin properties.
 | Control | Type | Description |
 | --- | --- | --- |
 | `Status` | Status Indicator | Plugin connection / Microsoft Graph request status |
-| `NextSoon` | Toggle Button | Turns on when the room is free but the next booking starts within 15 minutes |
+| `NextSoon` | Toggle Button | Turns on when the room is free but the next booking starts within the configured threshold |
+| `Free` | Toggle Button | Turns on when the room is currently available |
+| `Booked` | Toggle Button | Turns on when the room is currently occupied |
 
 ---
 
@@ -163,14 +168,16 @@ The plugin checks the configured mailbox calendar:
 
 - when the script starts
 - when settings change
-- every 60 seconds while running
+- at the configured polling interval while running
 
 ### Room Status
 
 The plugin compares calendar events against the current time and updates the room state:
 
 - If a meeting is active, the room is shown as booked until the meeting end time
-- If the room is free and the next meeting starts within 15 minutes, `NextSoon` turns on
+- If a meeting is active, `Booked` turns on and `Free` turns off
+- If the room is free, `Free` turns on and `Booked` turns off
+- If the room is free and the next meeting starts within the configured threshold, `NextSoon` turns on
 - If the room is free and another meeting exists later today, the next meeting time is displayed
 - If there are no more meetings today, the room is shown as free for the rest of the day
 
@@ -204,22 +211,13 @@ The plugin compares calendar events against the current time and updates the roo
 
 ## Known Limitations
 
-- No automatic mailbox discovery
-- No support for multiple rooms in one plugin instance
-- No configurable polling interval
-- No configurable warning threshold for `NextSoon`
 - Timezone is currently fixed to `Europe/Brussels`
-- Calendar write actions are not implemented
 
 ---
 
 ## Future Improvements
 
 - Add configurable timezone
-- Add configurable polling interval
-- Add configurable next-meeting warning threshold
-- Add support for multiple rooms
-- Add optional meeting subject privacy mode
 - Add richer error messages for Microsoft Graph responses
 
 ---

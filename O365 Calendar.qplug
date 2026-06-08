@@ -47,6 +47,21 @@ ENABLE_CODE_PIN = false
 function GetProperties()
     local props = { }
 
+	table.insert(props, {
+		Type = "Integer",
+		Name = "pollingInterval",
+		Value = 60,
+		Min = 1,
+		Max = 3600
+	})
+	table.insert(props, {
+		Type = "Integer",
+		Name = "nextMeetingSoonThreshold",
+		Value = 15,
+		Min = 1,
+		Max = 3600
+	})
+
     return props
 end
 
@@ -118,6 +133,24 @@ function GetControls(props)
 
 	table.insert(ctls, {
 		Name = "NextSoon",
+		ControlType = "Button",
+		ButtonType = "Toggle",
+		Count = 1,
+		PinStyle = "Output",
+		UserPin = true
+	})
+
+	table.insert(ctls, {
+		Name = "Free",
+		ControlType = "Button",
+		ButtonType = "Toggle",
+		Count = 1,
+		PinStyle = "Output",
+		UserPin = true
+	})
+
+	table.insert(ctls, {
+		Name = "Booked",
 		ControlType = "Button",
 		ButtonType = "Toggle",
 		Count = 1,
@@ -384,6 +417,8 @@ function UpdateRoomStatus(events)
     if roomBooked then
         Controls.RoomStatusColor.Color = COLOR_OCCUPIED
         Controls.NextSoon.Boolean = false
+		Controls.Free.Boolean = false
+		Controls.Booked.Boolean = true
 
         if nextMeeting then
             -- Booked now, and another meeting later today
@@ -413,10 +448,12 @@ function UpdateRoomStatus(events)
 
     else
         -- Room is free now
+		Controls.Free.Boolean = true
+		Controls.Booked.Boolean = false
         if nextMeeting then
             local minutesUntilNext = math.floor((nextMeeting._startUnix - now) / 60)
 
-            if minutesUntilNext <= 15 then
+            if minutesUntilNext <= Properties["nextMeetingSoonThreshold"].Value then
                 -- Free now, but next meeting soon
                 Controls.RoomStatusColor.Color = COLOR_WARNING
                 Controls.NextSoon.Boolean = true
@@ -636,7 +673,7 @@ function Initialize()
 	end
 
 	GetBookings()
-	bookingTimer:Start(60)
+	bookingTimer:Start(Properties["pollingInterval"].Value)
 
 	Controls.Client_ID.EventHandler = SettingsChanged
 	Controls.Tenant_ID.EventHandler = SettingsChanged
@@ -645,6 +682,9 @@ function Initialize()
 
 	LoadSettings()
 	Controls.Status.Value = 5
+	Controls.Free.Boolean = false
+	Controls.Booked.Boolean = false
+	Controls.NextSoon.Boolean = false
 end
 
 local canInitialize = true
